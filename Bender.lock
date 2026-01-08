@@ -327,7 +327,7 @@ packages:
     revision: cbcd7c5d268686a32446badd6a6972d17a0c2d94
     version: null
     source:
-      Path: https://github.com/pulp-platform/redmule.git
+      Git: https://github.com/pulp-platform/redmule.git
     dependencies:
     - common_cells
     - cv32e40p

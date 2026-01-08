@@ -21,6 +21,7 @@
         zero_mem_size: 60, // kB
         ext_mem_size: 4, //kB
         dma_data_width: 512,
+        ext_data_width: 256,
         // TODO(fischeti): Check with Thomas
         dma_axi_req_fifo_depth: 24,
         dma_req_fifo_depth: 8,
@@ -31,9 +32,12 @@
         cluster_base_expose: true,
         alias_region_enable: true,
         alias_region_base: 0x30000000,
-        num_exposed_wide_tcdm_ports: 1,
-        narrow_axi_port_expose: true,
-        enable_external_interrupts: true,
+        nr_external_cores: 4,
+        num_exposed_wide_tcdm_ports: 4,
+        num_exposed_narrow_tcdm_ports: 4,
+        narrow_axi_port_expose: false,
+        enable_external_interrupts: false,
+        enable_xif: false,
         vm_support: false,
         // Timing parameters
         timing: {
@@ -66,14 +70,6 @@
                     cacheline: 256 // word size in bits
                 },
                 cores: [
-                    { $ref: "#/compute_core_template" },
-                    { $ref: "#/compute_core_template" },
-                    { $ref: "#/compute_core_template" },
-                    { $ref: "#/compute_core_template" },
-                    { $ref: "#/compute_core_template" },
-                    { $ref: "#/compute_core_template" },
-                    { $ref: "#/compute_core_template" },
-                    { $ref: "#/compute_core_template" },
                     { $ref: "#/dma_core_template" },
                 ]
             }

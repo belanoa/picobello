@@ -9,15 +9,15 @@ package:
 
 dependencies:
   register_interface: { git: "https://github.com/pulp-platform/register_interface.git", version: "0.4.5"                                }
-  axi:                { git: "https://github.com/pulp-platform/axi.git",                version: "0.39.6"                               }
+  axi:                { git: "https://github.com/pulp-platform/axi.git",                rev: "bd1abffc0812f8170902e5fb93142c7785c0b8c1" }
   common_cells:       { git: "https://github.com/pulp-platform/common_cells.git",       rev: "snitch"                                   }
   cheshire:           { git: "https://github.com/pulp-platform/cheshire.git",           rev: "picobello"                                }
   snitch_cluster:     { git: "https://github.com/pulp-platform/snitch_cluster.git",     rev: "5d6c957c70e3824e2330d8308eb904724cd41cbe" }
   floo_noc:           { git: "https://github.com/pulp-platform/FlooNoC.git",            rev: "develop"                                  }
   obi:                { git: "https://github.com/pulp-platform/obi.git",                rev: "acfcd0f80c7539aa8da7821a66d9acf2074a5b4e" }
-  redmule:            { git: "https://github.com/pulp-platform/redmule.git",            rev: "picobello"                                }
+  redmule:            { git: "https://github.com/pulp-platform/redmule.git",            rev: "87d014e64415a5a0ee036238f5bb826d067134d2" }
   hci:                { git: "https://github.com/pulp-platform/hci.git",                rev: "06fcba671e060f2e1b03b7ebe2d3e719f1557099" }
-  datamover:          { git: "https://github.com/pulp-platform/datamover.git",          rev: "5df9c9bd9e10ad020763c4291c571adf35ef4ae2" } # branch: transpose
+  datamover:          { git: "https://github.com/pulp-platform/datamover.git",          rev: "e4fb814055718c64a438845382cda6ff4ca42ee9" } # branch: transpose
   apb:                { git: "https://github.com/pulp-platform/apb.git",                version: "0.2.4"                                }
   apb_fll_if:         { git: "https://github.com/pulp-platform/apb_fll_if.git",         rev: "structs"                                  }
   axi_obi:            { path: "hw/axi_obi"                                                                                              }
@@ -53,6 +53,7 @@ sources:
   - hw/mem_tile.sv
   - hw/spm_tile.sv
   - hw/dummy_tile.sv
+  - hw/micro_cluster.sv
 
   - target: not(asic)
     files:

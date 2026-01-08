@@ -95,7 +95,7 @@ module picobello_top
     localparam id_t ClusterPhysicalId = picobello_pkg::SamPhysical[ClusterSamIdx].idx;
     localparam int X = int'(ClusterPhysicalId.x);
     localparam int Y = int'(ClusterPhysicalId.y);
-    localparam int unsigned HartBaseId = c * NrCores + 1;  // Cheshire is hart 0
+    localparam int unsigned HartBaseId = c * (NrCores + NrExtCores) + 1;  // Cheshire is hart 0
     localparam axi_wide_in_addr_t ClusterBaseAddr = Sam[ClusterSamIdx].start_addr;
 
     cluster_tile i_cluster_tile (
@@ -224,7 +224,7 @@ module picobello_top
   localparam id_t FhgSpuId = Sam[FhgSpuSamIdx].idx;
 
   // Add offset to consider Cheshire as hart 0
-  localparam int unsigned FhgSpuHartBaseId = NumClusters * NrCores + 1;
+  localparam int unsigned FhgSpuHartBaseId = NumClusters * (NrCores + NrExtCores) + 1;
   localparam id_t FhgSpuPhysicalId = SamPhysical[FhgSpuSamIdx].idx;
 
   fhg_spu_tile i_fhg_spu_tile (

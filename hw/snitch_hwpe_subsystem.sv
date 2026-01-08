@@ -16,21 +16,48 @@ module snitch_hwpe_subsystem
   parameter int unsigned HwpeDataWidth = 256,
   parameter int unsigned IdWidth       = 8,
   parameter int unsigned NrCores       = 8,
-  parameter int unsigned TCDMDataWidth = 64
+  parameter int unsigned NrPorts       = NrCores,
+  parameter int unsigned TCDMDataWidth = 64,
+  parameter int unsigned XifNumHarts           = 1,
+  parameter int unsigned XifIdWidth            = 1,
+  parameter int unsigned XifIssueRegisterSplit = 0,
+  parameter int unsigned NrRedW = 1,
+  parameter int unsigned NrRedH = 1,
+  // XIF types
+  parameter type         x_issue_req_t          = logic,
+  parameter type         x_issue_resp_t         = logic,
+  parameter type         x_register_t           = logic,
+  parameter type         x_commit_t             = logic,
+  parameter type         x_result_t             = logic
 ) (
   input logic clk_i,
   input logic rst_ni,
   input logic test_mode_i,
 
   // TCDM interface (Master)
-  output tcdm_req_t tcdm_req_o,
-  input  tcdm_rsp_t tcdm_rsp_i,
+  output tcdm_req_t     [NrPorts-1:0] tcdm_req_o,
+  input  tcdm_rsp_t     [NrPorts-1:0] tcdm_rsp_i,
 
-  // HWPE control interface (Slave)
-  input  periph_req_t hwpe_ctrl_req_i,
-  output periph_rsp_t hwpe_ctrl_rsp_o,
+  input  x_issue_req_t  [NrCores-1:0] x_issue_req_i      ,
+  output x_issue_resp_t [NrCores-1:0] x_issue_resp_o     ,
+  input  logic          [NrCores-1:0] x_issue_valid_i    ,
+  output logic          [NrCores-1:0] x_issue_ready_o    ,
+  input  x_register_t   [NrCores-1:0] x_register_i       ,
+  input  logic          [NrCores-1:0] x_register_valid_i ,
+  output logic          [NrCores-1:0] x_register_ready_o ,
+  input  x_commit_t     [NrCores-1:0] x_commit_i         ,
+  input  logic          [NrCores-1:0] x_commit_valid_i   ,
+  output x_result_t     [NrCores-1:0] x_result_o         ,
+  output logic          [NrCores-1:0] x_result_valid_o   ,
+  input  logic          [NrCores-1:0] x_result_ready_i   ,
 
-  output logic [NrCores-1:0] hwpe_evt_o
+  output logic [NrCores-1:0] hwpe_evt_o,
+
+  // Inter-CCC network
+  hwpe_stream_intf_stream.sink    w_stream_i ,
+  hwpe_stream_intf_stream.sink    x_stream_i ,
+  hwpe_stream_intf_stream.source  w_stream_o ,
+  hwpe_stream_intf_stream.source  x_stream_o
 );
 
   localparam int unsigned NrTCDMPorts = (HwpeDataWidth / TCDMDataWidth);
@@ -58,193 +85,108 @@ module snitch_hwpe_subsystem
   // Machine HWPE Interrupt
   logic [NrCores-1:0] hwpe_evt_d, hwpe_evt_q;
 
-  hwpe_ctrl_intf_periph #(.ID_WIDTH(IdWidth)) periph[0:1] (.clk(clk_i));
-
   hci_core_intf #(
 `ifndef SYNTHESIS
     .WAIVE_RSP3_ASSERT(1'b1),
+    .WAIVE_RSP5_ASSERT(1'b1),
 `endif
     .DW               (HwpeDataWidth),
     .EW               (0),
     .EHW              (0)
-  ) tcdm (
+  ) tcdm[0:NrPorts-1] (
     .clk(clk_i)
   );
 
-  hci_core_intf #(
-`ifndef SYNTHESIS
-    .WAIVE_RSP3_ASSERT(1'b1),
-`endif
-    .DW               (HwpeDataWidth),
-    .EW               (0),
-    .EHW              (0)
-  ) tcdm_to_mux[0:1] (
-    .clk(clk_i)
-  );
+  // No Datamover
+  //assign hwpe_evt_o[NrCores-1] = '0;
+  //assign hwpe_evt_o[NrCores-2:NrPorts] = '0;
 
-  // request channel
-  assign tcdm_req_o.q_valid = tcdm.req;
-  assign tcdm_req_o.q.addr  = tcdm.add;
-  assign tcdm_req_o.q.write = ~tcdm.wen;
-  assign tcdm_req_o.q.strb  = tcdm.be;
-  assign tcdm_req_o.q.data  = tcdm.data;
-  assign tcdm_req_o.q.amo   = reqrsp_pkg::AMONone;
-  assign tcdm_req_o.q.user  = '0;
-  // response channel
-  assign tcdm.gnt           = tcdm_rsp_i.q_ready;
-  assign tcdm.r_valid       = tcdm_rsp_i.p_valid;
-  assign tcdm.r_data        = tcdm_rsp_i.p.data;
-  assign tcdm.r_opc         = '0;
-  assign tcdm.r_user        = '0;
+  //assign x_issue_resp_o [NrCores-2:NrRedH*NrRedW] = '0;
+  //assign x_issue_ready_o [NrCores-2:NrRedH*NrRedW] = '0;
+  //assign x_register_ready_o [NrCores-2:NrRedH*NrRedW] = '0;
+  //assign x_result_o [NrCores-2:NrRedH*NrRedW] = '0;
+  //assign x_result_valid_o [NrCores-2:NrRedH*NrRedW] = '0;
 
-  logic periph_sel_q, periph_sel_d;
-  assign periph_sel_d = hwpe_ctrl_req_i.q.addr[8];
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (~rst_ni) begin
-      periph_sel_q <= 1'b0;
-    end else begin
-      periph_sel_q <= periph_sel_d;
-    end
-  end
+  // No Datamover for now
+  //assign x_issue_resp_o [NrCores-1] = '0;
+  //assign x_issue_ready_o [NrCores-1] = '0;
+  //assign x_register_ready_o [NrCores-1] = '0;
+  //assign x_result_o [NrCores-1] = '0;
+  //assign x_result_valid_o [NrCores-1] = '0;
 
-  always_comb begin
-    // defaults overridden below
-    periph[0].req           = '0;
-    periph[1].req           = '0;
-    hwpe_ctrl_rsp_o.q_ready = '0;
-    hwpe_ctrl_rsp_o.p.data  = '0;
-    hwpe_ctrl_rsp_o.p_valid = '0;
+  for (genvar i = 0; i < NrRedH; i++) begin
+    for (genvar j = 0; j < NrRedW; j++) begin
+      x_issue_req_t x_issue_req_local;
+      x_register_t  x_register_local;
+      x_commit_t    x_commit_local;
 
-    // independent of selector
-    periph[0].add           = {24'h0, hwpe_ctrl_req_i.q.addr[7:0]};
-    periph[0].wen           = ~hwpe_ctrl_req_i.q.write;
-    periph[0].be            = hwpe_ctrl_req_i.q.strb;
-    periph[0].data          = hwpe_ctrl_req_i.q.data;
-    periph[0].id            = hwpe_ctrl_req_i.q.user;
-    periph[1].add           = {24'h0, hwpe_ctrl_req_i.q.addr[7:0]};
-    periph[1].wen           = ~hwpe_ctrl_req_i.q.write;
-    periph[1].be            = hwpe_ctrl_req_i.q.strb;
-    periph[1].data          = hwpe_ctrl_req_i.q.data;
-    periph[1].id            = hwpe_ctrl_req_i.q.user;
+      always_comb begin
+        x_issue_req_local        = x_issue_req_i[i*NrRedW+j];
+        x_issue_req_local.hartid = '0;
+        x_register_local         = x_register_i[i*NrRedW+j];
+        x_register_local.hartid  = '0;
+        x_commit_local           = x_commit_i[i*NrRedW+j];
+        x_commit_local.hartid    = '0;
+      end
 
-    if ((hwpe_ctrl_req_i.q.addr[7:0] == 'h9C || hwpe_ctrl_req_i.q.addr[7:0] == 'h98 ||
-         hwpe_ctrl_req_i.q.addr[7:0] == 'h94)) begin
-      hwpe_ctrl_rsp_o.q_ready = hwpe_ctrl_req_i.q_valid;
-      hwpe_ctrl_rsp_o.p_valid = '1;
-    end else begin
       // request channel
-      if (periph_sel_d == 1'b0) begin
-        periph[0].req           = hwpe_ctrl_req_i.q_valid;
-        hwpe_ctrl_rsp_o.q_ready = periph[0].gnt;
-      end else begin
-        periph[1].req           = hwpe_ctrl_req_i.q_valid;
-        hwpe_ctrl_rsp_o.q_ready = periph[1].gnt;
-      end
+      assign tcdm_req_o[i*NrRedW+j].q_valid = tcdm[i*NrRedW+j].req;
+      assign tcdm_req_o[i*NrRedW+j].q.addr  = tcdm[i*NrRedW+j].add;
+      assign tcdm_req_o[i*NrRedW+j].q.write = ~tcdm[i*NrRedW+j].wen;
+      assign tcdm_req_o[i*NrRedW+j].q.strb  = tcdm[i*NrRedW+j].be;
+      assign tcdm_req_o[i*NrRedW+j].q.data  = tcdm[i*NrRedW+j].data;
+      assign tcdm_req_o[i*NrRedW+j].q.amo   = reqrsp_pkg::AMONone;
+      assign tcdm_req_o[i*NrRedW+j].q.user  = '0;
       // response channel
-      if (periph_sel_q == 1'b0) begin
-        hwpe_ctrl_rsp_o.p.data  = periph[0].r_data;
-        hwpe_ctrl_rsp_o.p_valid = periph[0].r_valid;
-      end else begin
-        hwpe_ctrl_rsp_o.p.data  = periph[1].r_data;
-        hwpe_ctrl_rsp_o.p_valid = periph[1].r_valid;
-      end
+      assign tcdm[i*NrRedW+j].gnt           = tcdm_rsp_i[i*NrRedW+j].q_ready;
+      assign tcdm[i*NrRedW+j].r_valid       = tcdm_rsp_i[i*NrRedW+j].p_valid;
+      assign tcdm[i*NrRedW+j].r_data        = tcdm_rsp_i[i*NrRedW+j].p.data;
+      assign tcdm[i*NrRedW+j].r_opc         = '0;
+      assign tcdm[i*NrRedW+j].r_user        = '0;
+
+      redmule_top #(
+        .DataW (HwpeDataWidth),
+        //.FpFormat (),
+        .Height (HwpeDataWidth/32),
+        .Width (HwpeDataWidth/32),
+        .NumPipeRegs (1),
+        .McnfigOpCode (7'b0001011),
+        .MarithOpCode (7'b0001011),
+        .MopcntOpCode (7'b0001011),
+        .XifNumHarts (XifNumHarts),
+        .XifIdWidth (XifIdWidth),
+        .XifIssueRegisterSplit (XifIssueRegisterSplit),
+        .x_issue_req_t (x_issue_req_t),
+        .x_issue_resp_t (x_issue_resp_t),
+        .x_register_t (x_register_t),
+        .x_commit_t (x_commit_t),
+        .x_result_t (x_result_t),
+        .HCI_SIZE_tcdm(HCISizeTcdm)
+      ) i_redmule_top (
+        .clk_i      (clk_i),
+        .rst_ni     (rst_ni),
+        .test_mode_i(test_mode_i),
+        .evt_o      (hwpe_evt_o[i*NrRedW+j]),
+        .busy_o     (),
+        .w_stream_i (w_stream_i),
+        .w_stream_o (w_stream_o),
+        .x_stream_i (x_stream_i),
+        .x_stream_o (x_stream_o),
+        .x_issue_req_i (x_issue_req_local),
+        .x_issue_resp_o (x_issue_resp_o[i*NrRedW+j]),
+        .x_issue_valid_i (x_issue_valid_i[i*NrRedW+j]),
+        .x_issue_ready_o (x_issue_ready_o[i*NrRedW+j]),
+        .x_register_i (x_register_local),
+        .x_register_valid_i (x_register_valid_i[i*NrRedW+j]),
+        .x_register_ready_o (x_register_ready_o[i*NrRedW+j]),
+        .x_commit_i (x_commit_local),
+        .x_commit_valid_i (x_commit_valid_i[i*NrRedW+j]),
+        .x_result_o (x_result_o[i*NrRedW+j]),
+        .x_result_valid_o (x_result_valid_o[i*NrRedW+j]),
+        .x_result_ready_i (x_result_ready_i[i*NrRedW+j]),
+        .tcdm       (tcdm[i*NrRedW+j])
+      );
     end
-
   end
-
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (~rst_ni) begin
-      clk_en <= '0;
-    end else begin
-      if (hwpe_ctrl_req_i.q.addr[7:0] == 'h9C && hwpe_ctrl_req_i.q_valid &&
-          hwpe_ctrl_req_i.q.write) begin
-        clk_en <= hwpe_ctrl_req_i.q.data[1:0];
-      end
-    end
-  end
-
-  always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (~rst_ni) begin
-      mux_sel <= '0;
-    end else begin
-      if (hwpe_ctrl_req_i.q.addr[7:0] == 'h98 && hwpe_ctrl_req_i.q_valid &&
-          hwpe_ctrl_req_i.q.write) begin
-        mux_sel <= hwpe_ctrl_req_i.q.data[0];
-      end
-    end
-  end
-
-
-  for (genvar ii = 0; ii < NrCores; ii++) begin : gen_hwpe_evt
-    always_ff @(posedge clk_i or negedge rst_ni) begin
-      if (~rst_ni) begin
-        hwpe_evt_q[ii] <= '0;
-      end else begin
-        if (evt[mux_sel][ii]) begin
-          hwpe_evt_q[ii] <= 1'b1;
-        end
-        else if (hwpe_ctrl_req_i.q.addr[7:0] == 'h94 && hwpe_ctrl_req_i.q_valid &&
-                 hwpe_ctrl_req_i.q.write && hwpe_ctrl_req_i.q.data == (1 << ii)) begin
-          hwpe_evt_q[ii] <= 1'b0;
-        end
-      end
-    end
-  end
-  assign hwpe_evt_o = hwpe_evt_q;
-
-  tc_clk_gating i_redmule_clk_gate (
-    .clk_i    (clk_i),
-    .en_i     (clk_en[0]),
-    .test_en_i('0),
-    .clk_o    (hwpe_clk[0])
-  );
-
-  tc_clk_gating i_datamover_clk_gate (
-    .clk_i    (clk_i),
-    .en_i     (clk_en[1]),
-    .test_en_i('0),
-    .clk_o    (hwpe_clk[1])
-  );
-
-  redmule_top #(
-    .ID_WIDTH     (IdWidth),
-    .N_CORES      (NrCores),
-    .DW           (HwpeDataWidth),
-    .HCI_SIZE_tcdm(HCISizeTcdm)
-  ) i_redmule_top (
-    .clk_i      (hwpe_clk[0]),
-    .rst_ni     (rst_ni),
-    .test_mode_i(test_mode_i),
-    .evt_o      (evt[0]),
-    .busy_o     (busy),
-    .tcdm       (tcdm_to_mux[0]),
-    .periph     (periph[0])
-  );
-
-  datamover_top #(
-    .ID           (IdWidth),
-    .N_CORES      (NrCores),
-    .BW           (HwpeDataWidth),
-    .HCI_SIZE_tcdm(HCISizeTcdm)
-  ) i_datamover_top (
-    .clk_i      (hwpe_clk[1]),
-    .rst_ni     (rst_ni),
-    .test_mode_i(test_mode_i),
-    .evt_o      (evt[1]),
-    .tcdm       (tcdm_to_mux[1]),
-    .periph     (periph[1])
-  );
-
-  hci_core_mux_static #(
-    .NB_CHAN    (2),
-    .HCI_SIZE_in(HCISizeTcdm)
-  ) i_static_mux (
-    .clk_i  (clk_i),
-    .rst_ni (rst_ni),
-    .clear_i(1'b0),
-    .sel_i  (mux_sel),
-    .in     (tcdm_to_mux),
-    .out    (tcdm)
-  );
 
 endmodule : snitch_hwpe_subsystem
