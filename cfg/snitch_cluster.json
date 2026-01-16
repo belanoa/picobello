@@ -36,8 +36,8 @@
         num_exposed_wide_tcdm_ports: 4,
         num_exposed_narrow_tcdm_ports: 4,
         narrow_axi_port_expose: false,
-        enable_external_interrupts: false,
-        enable_xif: false,
+        enable_external_interrupts: true,
+        enable_xif: true,
         vm_support: false,
         // Timing parameters
         timing: {

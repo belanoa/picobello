@@ -35,7 +35,16 @@ module cluster_tile
   output floo_wide_t                [ West:North] floo_wide_o,
   input  floo_req_t                 [ West:North] floo_req_i,
   output floo_rsp_t                 [ West:North] floo_rsp_o,
-  input  floo_wide_t                [ West:North] floo_wide_i
+  input  floo_wide_t                [ West:North] floo_wide_i,
+  // FractalSync ports
+  output fsync_req_t                              fsync_req_ht_o,
+  input  fsync_rsp_t                              fsync_rsp_ht_i,
+  output fsync_req_t                              fsync_req_hn_o,
+  input  fsync_rsp_t                              fsync_rsp_hn_i,
+  output fsync_req_t                              fsync_req_vt_o,
+  input  fsync_rsp_t                              fsync_rsp_vt_i,
+  output fsync_req_t                              fsync_req_vn_o,
+  input  fsync_rsp_t                              fsync_rsp_vn_i
 );
 
   // Tile-specific reset and clock signals
@@ -69,6 +78,22 @@ module cluster_tile
   logic out_barrier;
   logic [3:0] cl_interrupt;
 
+  logic mxip;
+
+  snitch_cluster_pkg::x_issue_req_t  x_issue_req;
+  snitch_cluster_pkg::x_issue_resp_t x_issue_resp;
+  snitch_cluster_pkg::x_register_t   x_register;
+  snitch_cluster_pkg::x_commit_t     x_commit;
+  snitch_cluster_pkg::x_result_t     x_result;
+
+  logic x_issue_valid;
+  logic x_issue_ready;
+  logic x_register_valid;
+  logic x_register_ready;
+  logic x_commit_valid;
+  logic x_result_valid;
+  logic x_result_ready;
+
   localparam snitch_ssr_pkg::ssr_cfg_t [2:0] SsrCfg = '{'{1, 0, 0, 1, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3},
     '{1, 1, 1, 0, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3},
     '{1, 1, 0, 0, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3}};
@@ -81,6 +106,7 @@ module cluster_tile
     .meip_i,
     .mtip_i,
     .msip_i,
+    .mxip_i                 (mxip),
     .hart_base_id_i,
     .cluster_base_addr_i,
     .clk_d2_bypass_i        ('0),
@@ -93,6 +119,18 @@ module cluster_tile
     .wide_out_resp_i        (cluster_wide_out_rsp),
     .wide_in_req_i          (cluster_wide_in_req),
     .wide_in_resp_o         (cluster_wide_in_rsp),
+    .x_issue_req_o          (x_issue_req),
+    .x_issue_resp_i         (x_issue_resp),
+    .x_issue_valid_o        (x_issue_valid),
+    .x_issue_ready_i        (x_issue_ready),
+    .x_register_o           (x_register),
+    .x_register_valid_o     (x_register_valid),
+    .x_register_ready_i     (x_register_ready),
+    .x_commit_o             (x_commit),
+    .x_commit_valid_o       (x_commit_valid),
+    .x_result_i             (x_result),
+    .x_result_valid_i       (x_result_valid),
+    .x_result_ready_o       (x_result_ready),
     .tcdm_wide_ext_req_i    (cluster_tcdm_wide_ext_req),
     .tcdm_wide_ext_resp_o   (cluster_tcdm_wide_ext_rsp),
     .tcdm_narrow_ext_req_i  (cluster_tcdm_narrow_ext_req),
@@ -103,6 +141,75 @@ module cluster_tile
     .barrier_o              (out_barrier),
     .hive_rsp_o             (hive_rsp),
     .cl_interrupt_o         (cl_interrupt)
+  );
+
+  snitch_cluster_pkg::x_issue_req_t x_issue_req_nohartid;
+  snitch_cluster_pkg::x_register_t x_register_nohartid;
+  snitch_cluster_pkg::x_commit_t x_commit_nohartid;
+
+  assign x_issue_req_nohartid = '{
+    instr: x_issue_req.instr,
+    hartid: '0,
+    id: x_issue_req.id
+  };
+
+  assign x_register_nohartid = '{
+    hartid: '0,
+    id: x_register.id,
+    rs: x_register.rs,
+    rs_valid: x_register.rs_valid
+  };
+
+  assign x_commit_nohartid = '{
+    hartid: '0,
+    id: x_commit.id,
+    commit_kill: x_commit.commit_kill
+  };
+
+  snitch_fsync_stub #(
+    .FsSyncOpCode          (7'b0001011),
+    .FsClrOpCode           (7'b0001011),
+    .FsSyncFunct3          (3'b100),
+    .FsClrFunct3           (3'b101),
+    .FsSyncFunct2          (2'b00),
+    .FsClrFunct2           (2'b00),
+    .InstFifoDepth         (2),
+    .XifIdWidth            (snitch_cluster_pkg::XifIdWidth),
+    .XifNumHarts           (1),
+    .XifIssueRegisterSplit (0),
+    .NrFsyncLvls           (picobello_pkg::NrFsyncLvls),
+    .x_issue_req_t         (snitch_cluster_pkg::x_issue_req_t),
+    .x_issue_resp_t        (snitch_cluster_pkg::x_issue_resp_t),
+    .x_register_t          (snitch_cluster_pkg::x_register_t),
+    .x_commit_t            (snitch_cluster_pkg::x_commit_t),
+    .x_result_t            (snitch_cluster_pkg::x_result_t),
+    .fsync_req_t           (picobello_pkg::fsync_req_t),
+    .fsync_rsp_t           (picobello_pkg::fsync_rsp_t)
+  ) i_fsync_stub (
+    .clk_i              (tile_clk),
+    .rst_ni             (tile_rst_n),
+    .clear_i            ('0),
+    .x_issue_req_i      (x_issue_req_nohartid),
+    .x_issue_resp_o     (x_issue_resp),
+    .x_issue_valid_i    (x_issue_valid),
+    .x_issue_ready_o    (x_issue_ready),
+    .x_register_i       (x_register_nohartid),
+    .x_register_valid_i (x_register_valid),
+    .x_register_ready_o (x_register_ready),
+    .x_commit_i         (x_commit_nohartid),
+    .x_commit_valid_i   (x_commit_valid),
+    .x_result_o         (x_result),
+    .x_result_valid_o   (x_result_valid),
+    .x_result_ready_i   (x_result_ready),
+    .fsync_req_ht_o,
+    .fsync_rsp_ht_i,
+    .fsync_req_hn_o,
+    .fsync_rsp_hn_i,
+    .fsync_req_vt_o,
+    .fsync_rsp_vt_i,
+    .fsync_req_vn_o,
+    .fsync_rsp_vn_i,
+    .irq_o              (mxip)
   );
 
   localparam int unsigned NrRedH = 2;

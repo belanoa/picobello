@@ -82,6 +82,20 @@ module picobello_top
 
   logic [NumClusters-1:0][NrCores-1:0] debug_req, meip, mtip, msip;
 
+  fsync_req_t fsync_req_ht_tile [NumClusters-1:0][0:0];
+  fsync_rsp_t fsync_rsp_ht_tile [NumClusters-1:0][0:0];
+  fsync_req_t fsync_req_hn_tile [NumClusters-1:0];
+  fsync_rsp_t fsync_rsp_hn_tile [NumClusters-1:0];
+  fsync_req_t fsync_req_vt_tile [NumClusters-1:0][0:0];
+  fsync_rsp_t fsync_rsp_vt_tile [NumClusters-1:0][0:0];
+  fsync_req_t fsync_req_vn_tile [NumClusters-1:0];
+  fsync_rsp_t fsync_rsp_vn_tile [NumClusters-1:0];
+
+  // Dummy 2D FractalSync response
+  fsync_rsp_t fsync_dummy_rsp[0:0][0:0];
+
+  assign fsync_dummy_rsp[0][0] = '0;
+
   // TODO: Connect the debug and interrupt signals
   assign debug_req = '0;
   assign meip      = '0;
@@ -117,9 +131,42 @@ module picobello_top
       .floo_wide_o        (floo_wide_out[X][Y]),
       .floo_req_i         (floo_req_in[X][Y]),
       .floo_rsp_o         (floo_rsp_out[X][Y]),
-      .floo_wide_i        (floo_wide_in[X][Y])
+      .floo_wide_i        (floo_wide_in[X][Y]),
+      .fsync_req_ht_o     (fsync_req_ht_tile[c][0]),
+      .fsync_rsp_ht_i     (fsync_rsp_ht_tile[c][0]),
+      .fsync_req_hn_o     (fsync_req_hn_tile[c]),
+      .fsync_rsp_hn_i     (fsync_rsp_hn_tile[c]),
+      .fsync_req_vt_o     (fsync_req_vt_tile[c][0]),
+      .fsync_rsp_vt_i     (fsync_rsp_vt_tile[c][0]),
+      .fsync_req_vn_o     (fsync_req_vn_tile[c]),
+      .fsync_rsp_vn_i     (fsync_rsp_vn_tile[c])
     );
   end
+
+  fractal_sync_4x4 #(
+    .AGGREGATE_WIDTH(FsyncAggrWidth),
+    .ID_WIDTH       (FsyncIdWidth),
+    .fsync_in_req_t (fsync_req_t),
+    //.fsync_out_req_t(fsync_req_t),
+    .fsync_rsp_t    (fsync_rsp_t),
+    .fsync_nbr_req_t(fsync_req_t),
+    .fsync_nbr_rsp_t(fsync_rsp_t)
+  ) i_fsync (
+    .clk_i,
+    .rst_ni,
+    .h_1d_fsync_req_i (fsync_req_ht_tile),
+    .h_1d_fsync_rsp_o (fsync_rsp_ht_tile),
+    .v_1d_fsync_req_i (fsync_req_vt_tile),
+    .v_1d_fsync_rsp_o (fsync_rsp_vt_tile),
+    .h_nbr_fsycn_req_i(fsync_req_hn_tile),
+    .h_nbr_fsycn_rsp_o(fsync_rsp_hn_tile),
+    .v_nbr_fsycn_req_i(fsync_req_vn_tile),
+    .v_nbr_fsycn_rsp_o(fsync_rsp_vn_tile),
+    .h_2d_fsync_req_o (),
+    .h_2d_fsync_rsp_i (fsync_dummy_rsp),
+    .v_2d_fsync_req_o (),
+    .v_2d_fsync_rsp_i (fsync_dummy_rsp)
+  );
 
   ///////////////////
   // Cheshire tile //

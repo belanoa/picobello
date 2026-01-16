@@ -20,6 +20,7 @@ dependencies:
   datamover:          { git: "https://github.com/pulp-platform/datamover.git",          rev: "e4fb814055718c64a438845382cda6ff4ca42ee9" } # branch: transpose
   apb:                { git: "https://github.com/pulp-platform/apb.git",                version: "0.2.4"                                }
   apb_fll_if:         { git: "https://github.com/pulp-platform/apb_fll_if.git",         rev: "structs"                                  }
+  fractal_sync:       { git: "https://github.com/VictorIsachi/fractal_sync.git",        rev: "df8e21b7e2b0e2d3198bf44a60b4ca67c334bcc2" }
   axi_obi:            { path: "hw/axi_obi"                                                                                              }
   picobello-pd:       { path: "./pd"                                                                                                    }
   fhg_spu_cluster:    { path: "./.deps/fhg_spu_cluster"                                                                                 }
@@ -47,6 +48,7 @@ sources:
   - hw/picobello_pkg.sv
   - hw/snitch_hwpe_subsystem.sv
   - hw/snitch_tcdm_aligner.sv
+  - hw/snitch_fsync_stub.sv
   # Level 2
   - hw/cluster_tile.sv
   - hw/cheshire_tile.sv

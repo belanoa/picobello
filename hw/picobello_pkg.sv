@@ -5,6 +5,7 @@
 // Author: Tim Fischer <fischeti@iis.ee.ethz.ch>
 
 `include "cheshire/typedef.svh"
+`include "fractal_sync/typedef.svh"
 
 package picobello_pkg;
 
@@ -390,6 +391,21 @@ package picobello_pkg;
     $display("]");
     $display("----------------------------------------------------------");
   endfunction
+
+  ///////////////////
+  //  FractalSync  //
+  ///////////////////
+
+  localparam NrFsyncLvls      = $clog2(MeshDim.y * MeshDim.y);
+  localparam FsyncAggrWidth = NrFsyncLvls + 1;
+  localparam FsyncLvlWidth  = $clog2(NrFsyncLvls);
+  localparam FsyncIdWidth   = NrFsyncLvls-1 >= 2 ? NrFsyncLvls-1 : 2;
+
+  typedef logic [FsyncAggrWidth-1:0] fsync_aggr_t;
+  typedef logic [FsyncLvlWidth-1:0]  fsync_lvl_t;
+  typedef logic [FsyncIdWidth-1:0]   fsync_id_t;
+
+  `FSYNC_TYPEDEF_ALL(fsync, fsync_aggr_t, fsync_lvl_t, fsync_id_t)
 
   ////////////////
   //  Cheshire  //
