@@ -168,10 +168,13 @@ module cluster_tile
 
   snitch_fsync_stub #(
     .FsSyncOpCode          (7'b0001011),
+    .FsSyncIOpCode         (7'b0001011),
     .FsClrOpCode           (7'b0001011),
     .FsSyncFunct3          (3'b100),
+    .FsSyncIFunct3         (3'b100),
     .FsClrFunct3           (3'b101),
     .FsSyncFunct2          (2'b00),
+    .FsSyncIFunct2         (2'b01),
     .FsClrFunct2           (2'b00),
     .InstFifoDepth         (2),
     .XifIdWidth            (snitch_cluster_pkg::XifIdWidth),

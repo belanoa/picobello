@@ -8,10 +8,13 @@
 module snitch_fsync_stub
 #(
   parameter logic [6:0]   FsSyncOpCode          = 7'b0001011,
+  parameter logic [6:0]   FsSyncIOpCode         = 7'b0001011,
   parameter logic [6:0]   FsClrOpCode           = 7'b0001011,
   parameter logic [2:0]   FsSyncFunct3          = 3'b100,
+  parameter logic [2:0]   FsSyncIFunct3         = 3'b100,
   parameter logic [2:0]   FsClrFunct3           = 3'b101,
   parameter logic [1:0]   FsSyncFunct2          = 2'b00,
+  parameter logic [1:0]   FsSyncIFunct2         = 2'b01,
   parameter logic [1:0]   FsClrFunct2           = 2'b00,
   parameter  int unsigned InstFifoDepth         = 4,
   parameter  int unsigned XifIdWidth            = 4,
@@ -57,8 +60,9 @@ module snitch_fsync_stub
 
   localparam int unsigned HartIdWidth = XifNumHarts > 1 ? $clog2(XifNumHarts) : 1;
 
-  localparam logic [11:0] FSSYNC = {FsSyncFunct2,FsSyncFunct3,FsSyncOpCode};
-  localparam logic [11:0] FSCLR  = {FsClrFunct2,FsClrFunct3,FsClrOpCode};
+  localparam logic [11:0] FSSYNC  = {FsSyncFunct2,FsSyncFunct3,FsSyncOpCode};
+  localparam logic [11:0] FSSYNCI = {FsSyncIFunct2,FsSyncIFunct3,FsSyncIOpCode};
+  localparam logic [11:0] FSCLR   = {FsClrFunct2,FsClrFunct3,FsClrOpCode};
 
   logic [XifNumHarts-1:0] issue_fifo_full,  register_fifo_full,
                           issue_fifo_empty, register_fifo_empty;
@@ -90,10 +94,8 @@ module snitch_fsync_stub
   always_comb begin : legal_inst_assignment
     legal_inst = 1'b0;
 
-    unique case ({x_issue_req_i.instr[26:25],x_issue_req_i.instr[14:12],x_issue_req_i.instr[6:0]})
-      FSSYNC, FSCLR: legal_inst = 1'b1;
-      default: legal_inst = 1'b0;
-    endcase
+    if ({x_issue_req_i.instr[26:25],x_issue_req_i.instr[14:12],x_issue_req_i.instr[6:0]} inside {FSSYNC,FSSYNCI,FSCLR})
+      legal_inst = 1'b1;
   end
 
   always_comb begin : x_issue_resp_assignment
@@ -103,6 +105,10 @@ module snitch_fsync_stub
       FSSYNC: begin
         x_issue_resp_o.writeback     = 'b0;
         x_issue_resp_o.register_read = 'b111;
+      end
+      FSSYNCI: begin
+        x_issue_resp_o.writeback     = 'b0;
+        x_issue_resp_o.register_read = 'b000;
       end
       FSCLR: begin
         x_issue_resp_o.writeback     = 'b0;
@@ -124,6 +130,10 @@ module snitch_fsync_stub
 
     unique case ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]})
       FSSYNC: begin
+        x_result_o.we   = 'b0;
+        x_result_o.data = 'b0;
+      end
+      FSSYNCI: begin
         x_result_o.we   = 'b0;
         x_result_o.data = 'b0;
       end
@@ -188,8 +198,13 @@ module snitch_fsync_stub
     end
   end
 
-  // Pop the fifos the first as soon as we detect an FSSYNC instruction or all the requested synchronizations are done
-  assign pop_enable = ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} == FSSYNC ? irq_en : 1'b1);
+  // Pop the fifos the first as soon as we detect an FSSYNC(I) instruction or all the requested synchronizations are done
+  always_comb begin
+    pop_enable = 1'b1;
+
+    if ({cur_issue[winner].instr[26:25],cur_issue[winner].instr[14:12],cur_issue[winner].instr[6:0]} inside {FSSYNC,FSSYNCI})
+      pop_enable = irq_en;
+  end
 
   for (genvar i = 0; i < XifNumHarts; i++) begin : gen_instruction_fifos
     logic [XifIdWidth-1:0] commit_id_d, commit_id_q,
@@ -205,6 +220,8 @@ module snitch_fsync_stub
 
     logic issue_push, register_push,
           issue_pop,  register_pop;
+
+    logic [$clog2(InstFifoDepth)-1:0] issue_util;
 
     always_ff @(posedge clk_i or negedge rst_ni) begin : commit_id_register
       if (~rst_ni) begin
@@ -281,7 +298,7 @@ module snitch_fsync_stub
       .testmode_i ( '0                    ),
       .full_o     ( issue_fifo_full[i]    ),
       .empty_o    ( issue_fifo_empty[i]   ),
-      .usage_o    (                       ),
+      .usage_o    ( issue_util            ),
       .data_i     ( x_issue_req_i         ),
       .push_i     ( issue_push            ),
       .data_o     ( cur_issue[i]          ),
@@ -331,6 +348,13 @@ module snitch_fsync_stub
       end
     end
 
+    // Variables for FSSYNCI
+    logic [IdWidthRs+1:0] fssynci_id;
+    logic [AggrWidthRs:0] fssynci_aggr;
+
+    assign fssynci_id   = {cur_issue[i].instr[17:15],cur_issue[i].instr[11:7]};
+    assign fssynci_aggr = {1'b0,cur_issue[i].instr[28:27],cur_issue[i].instr[24:18]};
+
     always_comb begin : fsync_assignment
       irq_clr[i]        = 1'b0;
       sync_num_valid[i] = 1'b0;
@@ -367,6 +391,40 @@ module snitch_fsync_stub
           fsync_req_vn[i].sig.aggr = {1'b0,cur_register[i].rs[0][22+:AggrWidthRs]};
           fsync_req_vn[i].sig.id   = {cur_register[i].rs[0][16+:IdWidthRs],2'b11};
         end
+        FSSYNCI: begin
+          sync_num_valid[i] = ~issue_fifo_empty[i];
+
+          case (fssynci_id[1:0])
+            2'b00: begin
+              sync_num_ht[i] = 1;
+
+              fsync_req_ht[i].sync     = (tree_cnt == 0) && ~issue_fifo_empty[i];
+              fsync_req_ht[i].sig.aggr = fssynci_aggr;
+              fsync_req_ht[i].sig.id   = fssynci_id;
+            end
+            2'b10: begin
+              sync_num_hn[i] = 1;
+
+              fsync_req_hn[i].sync     = (tree_cnt == 0) && ~issue_fifo_empty[i];
+              fsync_req_hn[i].sig.aggr = fssynci_aggr;
+              fsync_req_hn[i].sig.id   = fssynci_id;
+            end
+            2'b01: begin
+              sync_num_vt[i] = 1;
+
+              fsync_req_vt[i].sync     = (tree_cnt == 0) && ~issue_fifo_empty[i];
+              fsync_req_vt[i].sig.aggr = fssynci_aggr;
+              fsync_req_vt[i].sig.id   = fssynci_id;
+            end
+            2'b11: begin
+              sync_num_vn[i] = 1;
+
+              fsync_req_vn[i].sync     = (tree_cnt == 0) && ~issue_fifo_empty[i];
+              fsync_req_vn[i].sig.aggr = fssynci_aggr;
+              fsync_req_vn[i].sig.id   = fssynci_id;
+            end
+          endcase
+        end
         FSCLR: begin
           irq_clr[i]   = 1'b1;
         end
@@ -383,6 +441,8 @@ module snitch_fsync_stub
           fsync_req_vn[i]   = '0;
         end
       endcase
+
+      irq_clr[i] = irq_clr[i] || irq_en && winner == i && issue_util != 1 || irq_q[i] && issue_push;
     end
 
     always_ff @(posedge clk_i or negedge rst_ni) begin : irq_register
