@@ -125,7 +125,7 @@
         ],
     },
     dma_core_template: {
-        isa: "rv32imafd",
+        isa: "rv32ima",
         xdma: true,
         xssr: false,
         xfrep: false,
