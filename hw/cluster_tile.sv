@@ -94,6 +94,9 @@ module cluster_tile
   logic x_result_valid;
   logic x_result_ready;
 
+  logic [3:0] redmule_sync_req;
+  logic       redmule_sync_rsp;
+
   localparam snitch_ssr_pkg::ssr_cfg_t [2:0] SsrCfg = '{'{1, 0, 0, 1, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3},
     '{1, 1, 1, 0, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3},
     '{1, 1, 0, 0, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3}};
@@ -218,6 +221,8 @@ module cluster_tile
   localparam int unsigned NrRedH = 2;
   localparam int unsigned NrRedW = 2;
 
+  assign redmule_sync_rsp = &redmule_sync_req;
+
   hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) w_streams [0:(NrRedH)*(NrRedW+1)-1] ( .clk( clk_i ) );
   hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) x_streams [0:(NrRedH+1)*(NrRedW)-1] ( .clk( clk_i ) );
 
@@ -248,13 +253,13 @@ module cluster_tile
         .RVE                    (0),
         .RVM                    (1),
         .RVF                    (1),
-        .RVD                    (1),
+        .RVD                    (0),
         .XDivSqrt               (1),
         .XF16                   (1),
         .XF8                    (1),
         .XF8ALT                 (1),
         .XFVEC                  (1),
-        .XFDOTP                 (1),
+        .XFDOTP                 (0),
         .Xfrep                  (1),
         .Xssr                   (1),
         .Xcopift                (1),
@@ -303,6 +308,8 @@ module cluster_tile
         .hive_rsp_i (hive_rsp[i*NrRedW + j]),
         .barrier_o (barrier[i*NrRedW + j]),
         .barrier_i (out_barrier),
+        .sync_o (redmule_sync_req[i*NrRedW + j]),
+        .sync_i (redmule_sync_rsp),
         .w_stream_i (w_streams[i*(NrRedW+1)+j]),
         .x_stream_i (x_streams[i*NrRedW+j]),
         .w_stream_o (w_streams[i*(NrRedW+1)+j+1]),

@@ -330,7 +330,7 @@ packages:
       Path: pd
     dependencies: []
   redmule:
-    revision: cbcd7c5d268686a32446badd6a6972d17a0c2d94
+    revision: a796d29ab773bad6bd76e0a2a80f515f35e458e3
     version: null
     source:
       Git: https://github.com/pulp-platform/redmule.git
@@ -389,10 +389,10 @@ packages:
     - common_cells
     - register_interface
   snitch_cluster:
-    revision: e5e2ff04c5808796cd40de07f32fbe94621d4c75
+    revision: 6d82b0c5346d251d1bec5f9a45d76cd89185efea
     version: null
     source:
-      Git: https://github.com/belanoa/snitch_cluster.git
+      Git: https://github.com/pulp-platform/snitch_cluster.git
     dependencies:
     - apb
     - axi

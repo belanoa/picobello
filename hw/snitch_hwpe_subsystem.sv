@@ -53,6 +53,9 @@ module snitch_hwpe_subsystem
 
   output logic [NrCores-1:0] hwpe_evt_o,
 
+  output logic sync_o,
+  input  logic sync_i,
+
   // Inter-CCC network
   hwpe_stream_intf_stream.sink    w_stream_i ,
   hwpe_stream_intf_stream.sink    x_stream_i ,
@@ -184,6 +187,8 @@ module snitch_hwpe_subsystem
         .x_result_o (x_result_o[i*NrRedW+j]),
         .x_result_valid_o (x_result_valid_o[i*NrRedW+j]),
         .x_result_ready_i (x_result_ready_i[i*NrRedW+j]),
+        .sync_o,
+        .sync_i,
         .tcdm       (tcdm[i*NrRedW+j])
       );
     end

@@ -88,6 +88,9 @@ module micro_cluster
   output logic                barrier_o,
   input  logic                barrier_i,
 
+  output logic                sync_o,
+  input  logic                sync_i,
+
   hwpe_stream_intf_stream.sink    w_stream_i,
   hwpe_stream_intf_stream.sink    x_stream_i,
   hwpe_stream_intf_stream.source  w_stream_o,
@@ -359,6 +362,8 @@ module micro_cluster
     .x_result_valid_o   (x_result_valid),
     .x_result_ready_i   (x_result_ready),
     .hwpe_evt_o         (mxip),
+    .sync_o,
+    .sync_i,
     .w_stream_i         (w_stream_i),
     .x_stream_i         (x_stream_i),
     .w_stream_o         (w_stream_o),
