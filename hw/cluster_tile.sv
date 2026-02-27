@@ -102,6 +102,8 @@ module cluster_tile
     '{1, 1, 0, 0, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3}};
 
 
+  snitch_cluster_pkg::pace_param_t pace_param;
+
   snitch_cluster_wrapper i_cluster (
     .clk_i                  (tile_clk),
     .rst_ni                 (tile_rst_n),
@@ -143,7 +145,8 @@ module cluster_tile
     .core_events_i          (core_events),
     .barrier_o              (out_barrier),
     .hive_rsp_o             (hive_rsp),
-    .cl_interrupt_o         (cl_interrupt)
+    .cl_interrupt_o         (cl_interrupt),
+    .pace_param_o           (pace_param)
   );
 
   snitch_cluster_pkg::x_issue_req_t x_issue_req_nohartid;
@@ -263,6 +266,10 @@ module cluster_tile
         .Xfrep                  (1),
         .Xssr                   (1),
         .Xcopift                (1),
+        .PaceDegree             (snitch_cluster_pkg::PaceDegree),
+        .PaceParts              (snitch_cluster_pkg::PaceParts),
+        .PaceDataWidth          (snitch_cluster_pkg::PaceDataWidth),
+        .PaceEps                (snitch_cluster_pkg::PaceEps),
         .NumIntOutstandingLoads (4),
         .NumIntOutstandingMem   (4),
         .NumFPOutstandingLoads  (4),
@@ -293,7 +300,8 @@ module cluster_tile
         .narrow_tcdm_req_t      (snitch_cluster_pkg::tcdm_req_t),
         .narrow_tcdm_rsp_t      (snitch_cluster_pkg::tcdm_rsp_t),
         .hive_req_t             (snitch_cluster_pkg::hive_req_t),
-        .hive_rsp_t             (snitch_cluster_pkg::hive_rsp_t)
+        .hive_rsp_t             (snitch_cluster_pkg::hive_rsp_t),
+        .pace_param_t           (snitch_cluster_pkg::pace_param_t)
       ) i_ccc (
         .clk_i (tile_clk),
         .rst_ni (tile_rst_n),
@@ -313,7 +321,8 @@ module cluster_tile
         .w_stream_i (w_streams[i*(NrRedW+1)+j]),
         .x_stream_i (x_streams[i*NrRedW+j]),
         .w_stream_o (w_streams[i*(NrRedW+1)+j+1]),
-        .x_stream_o (x_streams[(i+1)*NrRedW+j])
+        .x_stream_o (x_streams[(i+1)*NrRedW+j]),
+        .pace_param_i (pace_param)
       );
     end
   end

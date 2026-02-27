@@ -36,6 +36,10 @@ module micro_cluster
   parameter bit                             Xfrep                  = 0,
   parameter bit                             Xssr                   = 0,
   parameter bit                             Xcopift                = 0,
+  parameter int unsigned                    PaceDegree             = 2,
+  parameter int unsigned                    PaceParts              = 16,
+  parameter int unsigned                    PaceDataWidth          = 32,
+  parameter int unsigned                    PaceEps                = 1,
   parameter int unsigned                    NumIntOutstandingLoads = 0,
   parameter int unsigned                    NumIntOutstandingMem   = 0,
   parameter int unsigned                    NumFPOutstandingLoads  = 0,
@@ -66,30 +70,33 @@ module micro_cluster
   parameter type                            narrow_tcdm_req_t      = logic,
   parameter type                            narrow_tcdm_rsp_t      = logic,
   parameter type                            hive_req_t             = logic,
-  parameter type                            hive_rsp_t             = logic
+  parameter type                            hive_rsp_t             = logic,
+  parameter type                            pace_param_t           = logic
 ) (
-  input logic                 clk_i,
-  input logic                 rst_ni,
+  input logic                     clk_i,
+  input logic                     rst_ni,
 
-  input logic [31:0]          hart_id_i,
-  input logic [AddrWidth-1:0] tcdm_addr_base_i,
+  input logic [31:0]              hart_id_i,
+  input logic [AddrWidth-1:0]     tcdm_addr_base_i,
 
-  output wide_tcdm_req_t      wide_tcdm_req_o,
-  input  wide_tcdm_rsp_t      wide_tcdm_rsp_i,
+  output wide_tcdm_req_t          wide_tcdm_req_o,
+  input  wide_tcdm_rsp_t          wide_tcdm_rsp_i,
 
-  output narrow_tcdm_req_t    narrow_tcdm_req_o,
-  input  narrow_tcdm_rsp_t    narrow_tcdm_rsp_i,
+  output narrow_tcdm_req_t        narrow_tcdm_req_o,
+  input  narrow_tcdm_rsp_t        narrow_tcdm_rsp_i,
 
-  input  logic                mcip_i,
+  input  logic                    mcip_i,
 
-  output hive_req_t           hive_req_o,
-  input  hive_rsp_t           hive_rsp_i,
+  output hive_req_t               hive_req_o,
+  input  hive_rsp_t               hive_rsp_i,
 
-  output logic                barrier_o,
-  input  logic                barrier_i,
+  output logic                    barrier_o,
+  input  logic                    barrier_i,
 
-  output logic                sync_o,
-  input  logic                sync_i,
+  output logic                    sync_o,
+  input  logic                    sync_i,
+
+  input  pace_param_t             pace_param_i,
 
   hwpe_stream_intf_stream.sink    w_stream_i,
   hwpe_stream_intf_stream.sink    x_stream_i,
@@ -259,6 +266,11 @@ module micro_cluster
     .Xfrep (Xfrep),
     .Xssr (Xssr),
     .Xcopift (Xcopift),
+    .PaceDegree (PaceDegree),
+    .PaceParts (PaceParts),
+    .PaceDataWidth (PaceDataWidth),
+    .PaceParamWidth ($bits(pace_param_t)),
+    .PaceEps (PaceEps),
     .Xipu (1'b0),
     .VMSupport ('0),
     .NumIntOutstandingLoads (NumIntOutstandingLoads),
@@ -322,7 +334,8 @@ module micro_cluster
     .tcdm_addr_base_i (tcdm_addr_base_i),
     .barrier_o (barrier_o),
     .barrier_i (barrier_i),
-    .fence_o (fence)
+    .fence_o (fence),
+    .pace_param_i (pace_param_i)
   );
 
   snitch_hwpe_subsystem #(

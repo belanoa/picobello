@@ -218,10 +218,10 @@ packages:
     - common_verification
     - idma
   fpnew:
-    revision: a8e0cba6dd50f357ece73c2c955d96efc3c6c315
+    revision: 7e4c00e2ec0118789cc5f353e093ee98bd7a6abc
     version: null
     source:
-      Git: https://github.com/pulp-platform/cvfpu.git
+      Git: git@iis-git.ee.ethz.ch:pace/cvfpu.git
     dependencies:
     - common_cells
     - fpu_div_sqrt_mvp
@@ -389,10 +389,10 @@ packages:
     - common_cells
     - register_interface
   snitch_cluster:
-    revision: 6d82b0c5346d251d1bec5f9a45d76cd89185efea
+    revision: 100967cab45bc6d8a94577a25f57fec0f1c33fcc
     version: null
     source:
-      Git: https://github.com/pulp-platform/snitch_cluster.git
+      Git: https://github.com/belanoa/snitch_cluster.git
     dependencies:
     - apb
     - axi

@@ -20,6 +20,10 @@
         cluster_periph_size: 60, // kB
         zero_mem_size: 60, // kB
         ext_mem_size: 4, //kB
+        pace_mem_size: 4, // kB
+        pace_degree: 2,
+        pace_parts: 16,
+        pace_eps: 1,
         dma_data_width: 512,
         ext_data_width: 256,
         // TODO(fischeti): Check with Thomas
