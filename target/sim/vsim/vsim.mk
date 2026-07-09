@@ -12,16 +12,16 @@ VLOG_ARGS = -work $(VSIM_WORK)
 VLOG_ARGS += -suppress vlog-2583
 VLOG_ARGS += -suppress vlog-13314
 VLOG_ARGS += -suppress vlog-13233
-VLOG_ARGS += -timescale 1ns/1ps
+VLOG_ARGS += -timescale \"1 ps / 1 ps\"
 
 VSIM_FLAGS = -work $(VSIM_WORK)
 VSIM_FLAGS += -suppress 3009
 VSIM_FLAGS += -suppress 8386
 VSIM_FLAGS += -suppress 13314
 VSIM_FLAGS += -quiet
-VSIM_FLAGS += -64
+VSIM_FLAGS += -t 1ps
 
-VSIM_FLAGS_GUI = -voptargs=+acc
+VSIM_FLAGS_GUI =
 
 define add_vsim_flag
 ifdef $(1)
@@ -46,13 +46,15 @@ vsim-compile: $(VSIM_DIR)/compile.tcl $(PB_HW_ALL)
 
 $(VSIM_DIR)/compile.tcl: $(BENDER_YML) $(BENDER_LOCK)
 	bender script vsim --compilation-mode common $(COMMON_TARGS) $(SIM_TARGS) --vlog-arg="$(VLOG_ARGS)"> $@
-	echo 'vlog -work $(VSIM_WORK) "$(realpath $(CHS_ROOT))/target/sim/src/elfloader.cpp" -ccflags "-std=c++11"' >> $@
+	echo 'vlog -work $(VSIM_WORK) "$(realpath $(CHS_ROOT))/target/sim/src/elfloader.cpp" -ccflags "-std=c++11" -timescale "1 ps / 1 ps"' >> $@
 
 vsim-run:
-	$(VSIM) $(VSIM_FLAGS) $(VSIM_FLAGS_GUI) $(TB_DUT) -do "log -r /*"
+	$(VOPT) -work $(VSIM_WORK) $(TB_DUT) -o $(TB_DUT)_opt +acc -timescale "1 ps / 1 ps"
+	$(VSIM) $(VSIM_FLAGS) $(VSIM_FLAGS_GUI) $(TB_DUT)_opt -do "log -r /* ; run -a"
 
 vsim-run-batch:
-	$(VSIM) -c $(VSIM_FLAGS) $(TB_DUT) -do "run -all; quit"
+	$(VOPT) -work $(VSIM_WORK) $(TB_DUT) -o $(TB_DUT)_bopt -timescale "1 ps / 1 ps"
+	$(VSIM) -c $(VSIM_FLAGS) $(TB_DUT)_bopt -do "run -all; quit"
 
 vsim-run-batch-verify: vsim-run-batch
 ifdef VERIFY_PY

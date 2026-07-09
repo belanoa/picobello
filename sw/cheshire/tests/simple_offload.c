@@ -10,7 +10,7 @@
 #include "snitch_cluster_cfg.h"
 
 // This needs to be in a region which is not cached
-volatile uint32_t (*return_code_array)[CFG_CLUSTER_NR_CORES] = (uint32_t (*)[CFG_CLUSTER_NR_CORES])0x707FF000;
+volatile uint32_t (*return_code_array)[1] = (uint32_t (*)[1])0x707FF000;
 
 int main() {
 
@@ -20,7 +20,7 @@ int main() {
   for (int i = 0; i < SNRT_CLUSTER_NUM; i++) {
     *(volatile uint64_t *)&(picobello_addrmap.cluster[i].peripheral_reg.scratch[1].w) = (uintptr_t)&picobello_addrmap.l2_spm;
     *(volatile uint64_t *)&(picobello_addrmap.cluster[i].peripheral_reg.scratch[0].w) = (uintptr_t)&return_code_array[i];
-    for (int j = 0; j < CFG_CLUSTER_NR_CORES; j++) {
+    for (int j = 0; j < 1; j++) {
       return_code_array[i][j] = 0;
     }
   }
@@ -33,7 +33,7 @@ int main() {
   while (!all_finished) {
     all_finished = 1;
     for (int i = 0; i < SNRT_CLUSTER_NUM; i++) {
-      for (int j = 0; j < CFG_CLUSTER_NR_CORES; j++) {
+      for (int j = 0; j < 1; j++) {
         if ((return_code_array[i][j] & 1) == 0) {
           all_finished = 0;
           break;
@@ -45,7 +45,7 @@ int main() {
   // Sum up the return codes
   uint32_t sum = 0;
   for (int i = 0; i < SNRT_CLUSTER_NUM; i++) {
-    for (int j = 0; j < CFG_CLUSTER_NR_CORES; j++) {
+    for (int j = 0; j < 1; j++) {
       sum += (return_code_array[i][j] >> 1);
     }
   }

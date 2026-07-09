@@ -36,15 +36,11 @@ module micro_cluster
   parameter bit                             Xfrep                  = 0,
   parameter bit                             Xssr                   = 0,
   parameter bit                             Xcopift                = 0,
-  parameter int unsigned                    PaceDegree             = 2,
-  parameter int unsigned                    PaceParts              = 16,
-  parameter int unsigned                    PaceDataWidth          = 32,
-  parameter int unsigned                    PaceEps                = 1,
   parameter int unsigned                    NumIntOutstandingLoads = 0,
   parameter int unsigned                    NumIntOutstandingMem   = 0,
   parameter int unsigned                    NumFPOutstandingLoads  = 0,
   parameter int unsigned                    NumFPOutstandingMem    = 0,
-  parameter fpnew_pkg::fpu_implementation_t FPUImplementation      = '{default: fpnew_pkg::fpu_implementation_t'(0)},
+  parameter fpnew_pkg::fpu_implementation_t FPUImplementation      = '0,//'{default: fpnew_pkg::fpu_implementation_t'(0)},
   parameter int unsigned                    NumDTLBEntries         = 0,
   parameter int unsigned                    NumITLBEntries         = 0,
   parameter int unsigned                    NumSequencerInstr      = 0,
@@ -71,7 +67,9 @@ module micro_cluster
   parameter type                            narrow_tcdm_rsp_t      = logic,
   parameter type                            hive_req_t             = logic,
   parameter type                            hive_rsp_t             = logic,
-  parameter type                            pace_param_t           = logic
+  parameter type                            pace_param_t           = logic,
+  parameter type                            pace_cfg_t             = logic,
+  parameter pace_cfg_t                      PaceCfg                = '{default: '0}
 ) (
   input logic                     clk_i,
   input logic                     rst_ni,
@@ -125,14 +123,14 @@ module micro_cluster
 
   typedef logic [TCDMMemAddrWidthL0-1:0]  tcdm_mem_addr_t;
 
-  `TCDM_TYPEDEF_ALL(tcdm_wa, tcdm_addr_wa_t, wide_data_t, wide_strb_t, logic)
+  `TCDM_TYPEDEF_ALL(tcdm_wa, tcdm_addr_wa_t, wide_data_t, wide_strb_t, user_dma_t)
 
-  `TCDM_TYPEDEF_ALL(core_tcdm_wa, tcdm_addr_wa_t, narrow_data_t, narrow_strb_t, logic)
+  `TCDM_TYPEDEF_ALL(core_tcdm_wa, tcdm_addr_wa_t, narrow_data_t, narrow_strb_t, user_dma_t)
 
-  `MEM_TYPEDEF_ALL(mem_narrow, tcdm_mem_addr_t, narrow_data_t, narrow_strb_t, logic)
-  `MEM_TYPEDEF_ALL(mem_wide, tcdm_mem_addr_t, wide_data_t, wide_strb_t, logic)
+  `MEM_TYPEDEF_ALL(mem_narrow, tcdm_mem_addr_t, narrow_data_t, narrow_strb_t, user_dma_t)
+  `MEM_TYPEDEF_ALL(mem_wide, tcdm_mem_addr_t, wide_data_t, wide_strb_t, user_dma_t)
 
-  `REQRSP_TYPEDEF_ALL(reqrsp, addr_t, narrow_data_t, narrow_strb_t)
+  `REQRSP_TYPEDEF_ALL(reqrsp, addr_t, narrow_data_t, narrow_strb_t, user_dma_t)
 
   typedef struct packed {
     logic [2:0] ema;
@@ -174,8 +172,6 @@ module micro_cluster
   } x_result_t;
 
   logic mxip;
-
-  logic fence;
 
   x_issue_req_t  x_issue_req;
   x_issue_resp_t x_issue_resp;
@@ -249,6 +245,7 @@ module micro_cluster
     .x_register_t (x_register_t),
     .x_commit_t (x_commit_t),
     .x_result_t (x_result_t),
+    .pace_cfg_t (pace_cfg_t),
     .BootAddr (BootAddr),
     .RVE (RVE),
     .RVM (RVM),
@@ -266,12 +263,8 @@ module micro_cluster
     .Xfrep (Xfrep),
     .Xssr (Xssr),
     .Xcopift (Xcopift),
-    .PaceDegree (PaceDegree),
-    .PaceParts (PaceParts),
-    .PaceDataWidth (PaceDataWidth),
-    .PaceParamWidth ($bits(pace_param_t)),
-    .PaceEps (PaceEps),
-    .Xipu (1'b0),
+    .PaceCfg (PaceCfg),
+    .PrivateIpu (1'b0),
     .VMSupport ('0),
     .NumIntOutstandingLoads (NumIntOutstandingLoads),
     .NumIntOutstandingMem (NumIntOutstandingMem),
@@ -334,8 +327,9 @@ module micro_cluster
     .tcdm_addr_base_i (tcdm_addr_base_i),
     .barrier_o (barrier_o),
     .barrier_i (barrier_i),
-    .fence_o (fence),
-    .pace_param_i (pace_param_i)
+    .pace_param_i (pace_param_i),
+    .dca_req_i ('0),
+    .dca_rsp_o( )
   );
 
   snitch_hwpe_subsystem #(

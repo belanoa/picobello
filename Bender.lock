@@ -129,8 +129,8 @@ packages:
     - common_cells
     - register_interface
   cluster_icache:
-    revision: 64e21ae455bbdde850c4df13bef86ea55ac42537
-    version: 0.2.0
+    revision: 1642961b9561513f283674efc2c90f24855e8d39
+    version: 0.3.1
     source:
       Git: https://github.com/pulp-platform/cluster_icache.git
     dependencies:
@@ -146,7 +146,7 @@ packages:
     dependencies:
     - common_cells
   common_cells:
-    revision: e1c09c75775c5f03eb45906d5145dbd2f5bcfb95
+    revision: ca9d577f2fbc45ec557ab4e0905bbfc154441540
     version: null
     source:
       Git: https://github.com/pulp-platform/common_cells.git
@@ -218,10 +218,10 @@ packages:
     - common_verification
     - idma
   fpnew:
-    revision: 7e4c00e2ec0118789cc5f353e093ee98bd7a6abc
+    revision: 6691da40c2b6823eeb0ede96c2d44f50a3bb33cd
     version: null
     source:
-      Git: git@iis-git.ee.ethz.ch:pace/cvfpu.git
+      Git: git@iis-git.ee.ethz.ch:rfiorani/pulptorrent-fpnew.git
     dependencies:
     - common_cells
     - fpu_div_sqrt_mvp
@@ -389,10 +389,10 @@ packages:
     - common_cells
     - register_interface
   snitch_cluster:
-    revision: 100967cab45bc6d8a94577a25f57fec0f1c33fcc
+    revision: fe4b32cedd15fc6929bbdbc1bfa4d666e7189e3e
     version: null
     source:
-      Git: https://github.com/belanoa/snitch_cluster.git
+      Git: git@iis-git.ee.ethz.ch:rfiorani/pulptorrent-snitch-cluster.git
     dependencies:
     - apb
     - axi

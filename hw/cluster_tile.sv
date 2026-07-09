@@ -64,8 +64,6 @@ module cluster_tile
   snitch_cluster_pkg::wide_in_req_t     cluster_wide_in_req;
   snitch_cluster_pkg::wide_in_resp_t    cluster_wide_in_rsp;
 
-  snitch_cluster_pkg::narrow_out_req_t  [3:0] cluster_narrow_ext_req;
-  snitch_cluster_pkg::narrow_out_resp_t [3:0] cluster_narrow_ext_rsp;
   snitch_cluster_pkg::tcdm_ext_req_t    [3:0] cluster_tcdm_wide_ext_req;
   snitch_cluster_pkg::tcdm_ext_rsp_t    [3:0] cluster_tcdm_wide_ext_rsp;
   snitch_cluster_pkg::tcdm_req_t        [3:0] cluster_tcdm_narrow_ext_req;
@@ -97,9 +95,9 @@ module cluster_tile
   logic [3:0] redmule_sync_req;
   logic       redmule_sync_rsp;
 
-  localparam snitch_ssr_pkg::ssr_cfg_t [2:0] SsrCfg = '{'{1, 0, 0, 1, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3},
-    '{1, 1, 1, 0, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3},
-    '{1, 1, 0, 0, 1, 1, 4, 17, 17, 3, 4, 3, 8, 4, 3}};
+  localparam snitch_ssr_pkg::ssr_cfg_t [2:0] SsrCfg = '{'{1, 0, 0, 1, 1, 1, 4, 18, 18, 3, 4, 3, 8, 4, 3},
+    '{1, 1, 1, 0, 1, 1, 4, 18, 18, 3, 4, 3, 8, 4, 3},
+    '{1, 1, 0, 0, 1, 1, 4, 18, 18, 3, 4, 3, 8, 4, 3}};
 
 
   snitch_cluster_pkg::pace_param_t pace_param;
@@ -146,7 +144,12 @@ module cluster_tile
     .barrier_o              (out_barrier),
     .hive_rsp_o             (hive_rsp),
     .cl_interrupt_o         (cl_interrupt),
-    .pace_param_o           (pace_param)
+    .pace_param_o           (pace_param),
+    .dca_req_i ('0),
+    .dca_rsp_o (),
+    .cluster_base_offset_i (snitch_cluster_pkg::CfgClusterBaseOffset),
+    .narrow_ext_resp_i ('0),
+    .narrow_ext_req_o()
   );
 
   snitch_cluster_pkg::x_issue_req_t x_issue_req_nohartid;
@@ -243,6 +246,112 @@ module cluster_tile
     assign x_streams[NrRedH*NrRedW+j].ready = '1;
   end
 
+
+localparam fpnew_pkg::fpu_implementation_t MicroFPUImplementation [1] = '{
+  '{
+      PipeRegs: // FMA Block
+                '{
+                  '{  3, // FP32
+                      3, // FP64
+                      3, // FP16
+                      3, // FP8
+                      3, // FP16alt
+                      3,  // FP8alt
+                      0, // FP6
+                      0, // FP6alt
+                      0  // FP4
+                    },
+                  '{1, 1, 1, 1, 1, 1, 0, 0, 0},   // DIVSQRT
+                  '{1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    1,
+                    0, 0, 0},   // NONCOMP
+                  '{2,
+                    2,
+                    2,
+                    2,
+                    2,
+                    2,
+                    0, 0, 0},   // CONV
+                  '{3,
+                    3,
+                    3,
+                    3,
+                    3,
+                    3,
+                    0, 0, 0},    // DOTP
+                  '{4,
+                    4,
+                    4,
+                    4,
+                    4,
+                    4,
+                    4,
+                    4,
+                    4}    // MXDOTP
+                  },
+      UnitTypes: '{'{fpnew_pkg::MERGED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::MERGED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED},  // FMA
+                  '{fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED}, // DIVSQRT
+                  '{fpnew_pkg::PARALLEL,
+                      fpnew_pkg::PARALLEL,
+                      fpnew_pkg::PARALLEL,
+                      fpnew_pkg::PARALLEL,
+                      fpnew_pkg::PARALLEL,
+                      fpnew_pkg::PARALLEL,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED}, // NONCOMP
+                  '{fpnew_pkg::MERGED,
+                      fpnew_pkg::MERGED,
+                      fpnew_pkg::MERGED,
+                      fpnew_pkg::MERGED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED},   // CONV
+                  '{fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED}, // DOTP
+                  '{fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED,
+                      fpnew_pkg::DISABLED}},  // MXDOTP
+      PipeConfig: fpnew_pkg::INSIDE
+    }
+  };
+
+
   for (genvar i = 0; i < NrRedH; i++) begin : gen_ccc_h
     for (genvar j = 0; j < NrRedW; j++) begin : gen_ccc_w
       micro_cluster #(
@@ -266,15 +375,12 @@ module cluster_tile
         .Xfrep                  (1),
         .Xssr                   (1),
         .Xcopift                (1),
-        .PaceDegree             (snitch_cluster_pkg::PaceDegree),
-        .PaceParts              (snitch_cluster_pkg::PaceParts),
-        .PaceDataWidth          (snitch_cluster_pkg::PaceDataWidth),
-        .PaceEps                (snitch_cluster_pkg::PaceEps),
+        .PaceCfg                (snitch_cluster_pkg::PaceCfg),
         .NumIntOutstandingLoads (4),
         .NumIntOutstandingMem   (4),
         .NumFPOutstandingLoads  (4),
         .NumFPOutstandingMem    (4),
-        .FPUImplementation      (snitch_cluster_pkg::FPUImplementation[0]),  // FIXME: use one not from the package
+        .FPUImplementation      (MicroFPUImplementation[0]),
         .NumDTLBEntries         (1),
         .NumITLBEntries         (1),
         .NumSequencerInstr      (16),
@@ -301,7 +407,8 @@ module cluster_tile
         .narrow_tcdm_rsp_t      (snitch_cluster_pkg::tcdm_rsp_t),
         .hive_req_t             (snitch_cluster_pkg::hive_req_t),
         .hive_rsp_t             (snitch_cluster_pkg::hive_rsp_t),
-        .pace_param_t           (snitch_cluster_pkg::pace_param_t)
+        .pace_param_t           (snitch_cluster_pkg::pace_param_t),
+        .pace_cfg_t             (snitch_cluster_pkg::pace_cfg_t)
       ) i_ccc (
         .clk_i (tile_clk),
         .rst_ni (tile_rst_n),

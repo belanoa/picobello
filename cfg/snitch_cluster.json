@@ -6,6 +6,8 @@
 {
     nr_clusters: 16,
     cluster: {
+        enable_narrow_collectives: true,
+        enable_wide_collectives: true,
         cluster_base_addr: 0x20000000,
         cluster_base_offset: 0x40000,
         cluster_base_hartid: 1,
@@ -24,6 +26,8 @@
         pace_degree: 2,
         pace_parts: 16,
         pace_eps: 1,
+        pace_fmt_config: 320,
+        pace_pipe_dist: 4,
         dma_data_width: 512,
         ext_data_width: 256,
         // TODO(fischeti): Check with Thomas

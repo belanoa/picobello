@@ -141,8 +141,8 @@ floo-clean:
 # Physical Design #
 ###################
 
-PD_REMOTE ?= git@iis-git.ee.ethz.ch:picobello/picobello-pd.git
-PD_COMMIT ?= main
+PD_REMOTE ?= git@iis-git.ee.ethz.ch:rfiorani/pulptorrent-pd.git
+PD_COMMIT ?= pulptorrent
 PD_DIR = $(PB_ROOT)/pd
 SPU_REMOTE ?= git@iis-git.ee.ethz.ch:picobello/fhg_spu_cluster.git
 SPU_COMMIT ?= main
