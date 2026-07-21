@@ -22,6 +22,7 @@ tabulate
 
 # Miscellaneous requirements
 hjson  # for reggen
+setuptools==81.0.0
 
 # For peakrdl
 peakrdl
