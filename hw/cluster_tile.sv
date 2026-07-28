@@ -55,6 +55,36 @@ module cluster_tile
   // Snitch Cluster //
   ////////////////////
 
+  // TUTTE QUESTE 7 RIGHE VANNO MODIFICATE ASSIEME, FAI CHE QUESTE TRE CONDIZIONI SIANO RISPETTATE
+  // 1. NrRedH * NrRedW == NrMicroH * NrMicroW * NrRedPerMicro
+  // 2. NrRedPerMicro <= NrCcPerMicro
+  // 3. NrFPUPerMicro <= NrCcPerMicro
+  localparam int unsigned NrRedH = 2;
+  localparam int unsigned NrRedW = 2;
+
+  localparam int unsigned NrCcPerMicro  = 1;
+  localparam int unsigned NrRedPerMicro = 1;
+  localparam int unsigned NrFPUPerMicro = 1;
+
+  localparam int unsigned NrMicroH = 2;
+  localparam int unsigned NrMicroW = 2;
+
+  localparam int unsigned NrRedHLocal = NrRedH/NrMicroH;
+  localparam int unsigned NrRedWLocal = NrRedW/NrMicroW;
+
+  localparam bit          MuxNarrowPort = 1;
+  localparam int unsigned NrNarrowPortsPerCc = MuxNarrowPort ? 1 : 3;
+
+  localparam int unsigned NrBanksL0 = 8; // 8 for 32kB
+  localparam int unsigned TCDMDepthL0 = 512;
+
+  localparam int unsigned MicroBootAddr = 32'h30000000 + TcdmSize*1024;
+
+  logic [NrMicroH*NrMicroW*NrCcPerMicro-1:0][31:0] hart_base_ids;
+  for (genvar i = 0; i < NrMicroH*NrMicroW*NrCcPerMicro; i++) begin
+    assign hart_base_ids[i] = hart_base_id_i + 1 + i;
+  end
+
   snitch_cluster_pkg::narrow_in_req_t   cluster_narrow_in_req;
   snitch_cluster_pkg::narrow_in_resp_t  cluster_narrow_in_rsp;
   snitch_cluster_pkg::narrow_out_req_t  cluster_narrow_out_req;
@@ -64,17 +94,17 @@ module cluster_tile
   snitch_cluster_pkg::wide_in_req_t     cluster_wide_in_req;
   snitch_cluster_pkg::wide_in_resp_t    cluster_wide_in_rsp;
 
-  snitch_cluster_pkg::tcdm_ext_req_t    [3:0] cluster_tcdm_wide_ext_req;
-  snitch_cluster_pkg::tcdm_ext_rsp_t    [3:0] cluster_tcdm_wide_ext_rsp;
-  snitch_cluster_pkg::tcdm_req_t        [3:0] cluster_tcdm_narrow_ext_req;
-  snitch_cluster_pkg::tcdm_rsp_t        [3:0] cluster_tcdm_narrow_ext_rsp;
+  snitch_cluster_pkg::tcdm_ext_req_t    [NrRedW*NrRedH-1:0] cluster_tcdm_wide_ext_req;
+  snitch_cluster_pkg::tcdm_ext_rsp_t    [NrRedW*NrRedH-1:0] cluster_tcdm_wide_ext_rsp;
+  snitch_cluster_pkg::tcdm_req_t        [NrMicroW*NrMicroH*NrCcPerMicro-1:0][NrNarrowPortsPerCc-1:0] cluster_tcdm_narrow_ext_req;
+  snitch_cluster_pkg::tcdm_rsp_t        [NrMicroW*NrMicroH*NrCcPerMicro-1:0][NrNarrowPortsPerCc-1:0] cluster_tcdm_narrow_ext_rsp;
 
-  logic                          [3:0] barrier;
-  snitch_cluster_pkg::hive_req_t [3:0] hive_req;
-  snitch_cluster_pkg::hive_rsp_t [3:0] hive_rsp;
-  snitch_pkg::core_events_t      [3:0] core_events;
+  logic                          [NrMicroW*NrMicroH*NrCcPerMicro-1:0] barrier;
+  snitch_cluster_pkg::hive_req_t [NrMicroW*NrMicroH*NrCcPerMicro-1:0] hive_req;
+  snitch_cluster_pkg::hive_rsp_t [NrMicroW*NrMicroH*NrCcPerMicro-1:0] hive_rsp;
+  snitch_pkg::core_events_t      [NrMicroW*NrMicroH*NrCcPerMicro-1:0] core_events;
   logic out_barrier;
-  logic [3:0] cl_interrupt;
+  logic [NrMicroW*NrMicroH*NrCcPerMicro-1:0] cl_interrupt;
 
   logic mxip;
 
@@ -92,8 +122,8 @@ module cluster_tile
   logic x_result_valid;
   logic x_result_ready;
 
-  logic [3:0] redmule_sync_req;
-  logic       redmule_sync_rsp;
+  logic [NrRedW*NrRedH-1:0] redmule_sync_req;
+  logic                     redmule_sync_rsp;
 
   localparam snitch_ssr_pkg::ssr_cfg_t [2:0] SsrCfg = '{'{1, 0, 0, 1, 1, 1, 4, 18, 18, 3, 4, 3, 8, 4, 3},
     '{1, 1, 1, 0, 1, 1, 4, 18, 18, 3, 4, 3, 8, 4, 3},
@@ -224,26 +254,33 @@ module cluster_tile
     .irq_o              (mxip)
   );
 
-  localparam int unsigned NrRedH = 2;
-  localparam int unsigned NrRedW = 2;
-
+  //   w
+  //   |
+  // x-+---------->
+  //   | FIGA
+  //   |
+  //   |
+  //   |
+  //   v
+ 
   assign redmule_sync_rsp = &redmule_sync_req;
 
-  hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) w_streams [0:(NrRedH)*(NrRedW+1)-1] ( .clk( clk_i ) );
-  hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) x_streams [0:(NrRedH+1)*(NrRedW)-1] ( .clk( clk_i ) );
+  hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) x_streams [0:(NrRedH)*(NrRedW+1)-1] ( .clk( clk_i ) );
+  hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) w_streams [0:(NrRedH+1)*(NrRedW)-1] ( .clk( clk_i ) );
 
-  for (genvar i = 0; i < NrRedH; i++) begin : assign_w_streams
-    assign w_streams[i*(NrRedW+1)].valid = '0;
-    assign w_streams[i*(NrRedW+1)].data  = '0;
-    assign w_streams[i*(NrRedW+1)].strb  = '0;
-    assign w_streams[i*(NrRedW+1)+NrRedW].ready = '1;
+  // TODO TOFIX TODAY TOYOTA
+  for (genvar i = 0; i < NrRedW; i++) begin : assign_w_streams
+    assign w_streams[i*(NrRedH+1)].valid = '0;
+    assign w_streams[i*(NrRedH+1)].data  = '0;
+    assign w_streams[i*(NrRedH+1)].strb  = '0;
+    assign w_streams[i*(NrRedH+1)+NrRedH].ready = '1;
   end
 
-  for (genvar j = 0; j < NrRedW; j++) begin : assign_x_streams
-    assign x_streams[j].valid = '0;
-    assign x_streams[j].data  = '0;
-    assign x_streams[j].strb  = '0;
-    assign x_streams[NrRedH*NrRedW+j].ready = '1;
+  for (genvar j = 0; j < NrRedH; j++) begin : assign_x_streams
+    assign x_streams[j*(NrRedW+1)].valid = '0;
+    assign x_streams[j*(NrRedW+1)].data  = '0;
+    assign x_streams[j*(NrRedW+1)].strb  = '0;
+    assign x_streams[j*(NrRedW+1)+NrRedW].ready = '1;
   end
 
 
@@ -352,16 +389,35 @@ localparam fpnew_pkg::fpu_implementation_t MicroFPUImplementation [1] = '{
   };
 
 
-  for (genvar i = 0; i < NrRedH; i++) begin : gen_ccc_h
-    for (genvar j = 0; j < NrRedW; j++) begin : gen_ccc_w
+  for (genvar i = 0; i < NrMicroH; i++) begin : gen_ccc_h
+    for (genvar j = 0; j < NrMicroW; j++) begin : gen_ccc_w
+
+      hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) w_streams_local_i [0:NrRedPerMicro-1] ( .clk( clk_i ) );
+      hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) x_streams_local_i [0:NrRedPerMicro-1] ( .clk( clk_i ) );
+      hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) w_streams_local_o [0:NrRedPerMicro-1] ( .clk( clk_i ) );
+      hwpe_stream_intf_stream #( .DATA_WIDTH ( ExtDataWidth ) ) x_streams_local_o [0:NrRedPerMicro-1] ( .clk( clk_i ) );
+
+      for (genvar h = 0; h < NrRedHLocal; h++) begin : gen_stream_h
+        for (genvar w = 0; w < NrRedWLocal; w++) begin : gen_stream_w
+          hwpe_stream_assign i_w_stream_assign (w_streams[j*(NrMicroH*NrRedPerMicro+NrRedWLocal)+i*NrRedHLocal+w*(NrMicroH*NrRedHLocal+1)+h], w_streams_local_i[h*NrRedWLocal+w]);
+          hwpe_stream_assign i_x_stream_assign (x_streams[i*(NrMicroW*NrRedPerMicro+NrRedHLocal)+j*NrRedWLocal+h*(NrMicroW*NrRedWLocal+1)+w], x_streams_local_i[h*NrRedWLocal+w]);
+          hwpe_stream_assign o_w_stream_assign (w_streams_local_o[h*NrRedWLocal+w], w_streams[j*(NrMicroH*NrRedPerMicro+NrRedWLocal)+i*NrRedHLocal+w*(NrMicroH*NrRedHLocal+1)+h+1]);
+          hwpe_stream_assign o_x_stream_assign (x_streams_local_o[h*NrRedWLocal+w], x_streams[i*(NrMicroW*NrRedPerMicro+NrRedHLocal)+j*NrRedWLocal+h*(NrMicroW*NrRedWLocal+1)+w+1]);
+        end
+      end
+
       micro_cluster #(
+        .MuxNarrowPort          (MuxNarrowPort),
+        .NrCc                   (NrCcPerMicro),
+        .NrRed                  (NrRedPerMicro),
+        .NrFPU                  (NrFPUPerMicro),
         .AddrWidth              (snitch_cluster_pkg::AddrWidth),
         .NarrowDataWidth        (snitch_cluster_pkg::NarrowDataWidth),
         .WideDataWidth          (snitch_cluster_pkg::ExtDataWidth),
         .TCDMAddrWidth          (snitch_cluster_pkg::TcdmAddrWidth),
-        .NrBanksL0              (8),
-        .TCDMDepthL0            (512),
-        .BootAddr               (32'h30020000),
+        .NrBanksL0              (NrBanksL0),
+        .TCDMDepthL0            (TCDMDepthL0),
+        .BootAddr               (MicroBootAddr),
         .RVE                    (0),
         .RVM                    (1),
         .RVF                    (1),
@@ -412,23 +468,23 @@ localparam fpnew_pkg::fpu_implementation_t MicroFPUImplementation [1] = '{
       ) i_ccc (
         .clk_i (tile_clk),
         .rst_ni (tile_rst_n),
-        .hart_id_i (hart_base_id_i + i*NrRedW + j + 1),
+        .hart_id_i (hart_base_ids[(i*NrMicroW + j) *NrCcPerMicro +: NrCcPerMicro]),
         .tcdm_addr_base_i (cluster_base_addr_i),
-        .wide_tcdm_req_o (cluster_tcdm_wide_ext_req[i*NrRedW + j]),
-        .wide_tcdm_rsp_i (cluster_tcdm_wide_ext_rsp[i*NrRedW + j]),
-        .narrow_tcdm_req_o (cluster_tcdm_narrow_ext_req[i*NrRedW + j]),
-        .narrow_tcdm_rsp_i (cluster_tcdm_narrow_ext_rsp[i*NrRedW + j]),
-        .mcip_i (cl_interrupt[i*NrRedW + j]),
-        .hive_req_o (hive_req[i*NrRedW + j]),
-        .hive_rsp_i (hive_rsp[i*NrRedW + j]),
-        .barrier_o (barrier[i*NrRedW + j]),
+        .wide_tcdm_req_o (cluster_tcdm_wide_ext_req[(i*NrMicroW + j)*NrRedPerMicro +: NrRedPerMicro]),
+        .wide_tcdm_rsp_i (cluster_tcdm_wide_ext_rsp[(i*NrMicroW + j)*NrRedPerMicro +: NrRedPerMicro]), 
+        .narrow_tcdm_req_o (cluster_tcdm_narrow_ext_req[(i*NrMicroW + j) *NrCcPerMicro +: NrCcPerMicro]),
+        .narrow_tcdm_rsp_i (cluster_tcdm_narrow_ext_rsp[(i*NrMicroW + j) *NrCcPerMicro +: NrCcPerMicro]),
+        .mcip_i (cl_interrupt[(i*NrMicroW + j) *NrCcPerMicro +: NrCcPerMicro]),
+        .hive_req_o (hive_req[(i*NrMicroW + j) *NrCcPerMicro +: NrCcPerMicro]),
+        .hive_rsp_i (hive_rsp[(i*NrMicroW + j) *NrCcPerMicro +: NrCcPerMicro]),
+        .barrier_o (barrier[(i*NrMicroW + j) *NrCcPerMicro +: NrCcPerMicro]),
         .barrier_i (out_barrier),
-        .sync_o (redmule_sync_req[i*NrRedW + j]),
+        .sync_o (redmule_sync_req[(i*NrMicroW + j)*NrRedPerMicro +: NrRedPerMicro]),
         .sync_i (redmule_sync_rsp),
-        .w_stream_i (w_streams[i*(NrRedW+1)+j]),
-        .x_stream_i (x_streams[i*NrRedW+j]),
-        .w_stream_o (w_streams[i*(NrRedW+1)+j+1]),
-        .x_stream_o (x_streams[(i+1)*NrRedW+j]),
+        .w_stream_i (w_streams_local_i),
+        .x_stream_i (x_streams_local_i),
+        .w_stream_o (w_streams_local_o),
+        .x_stream_o (x_streams_local_o),
         .pace_param_i (pace_param)
       );
     end

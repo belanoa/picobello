@@ -88,10 +88,10 @@ packages:
     - common_cells
     - register_interface
   cheshire:
-    revision: 0bebd9a2d6edb4665b00d2db9442c059692c0664
+    revision: 1eb0a3fcce5684f89fd28c6835c66e5811b6566e
     version: null
     source:
-      Git: https://github.com/pulp-platform/cheshire.git
+      Git: git@iis-git.ee.ethz.ch:rfiorani/pulptorrent-cheshire.git
     dependencies:
     - apb_uart
     - axi
@@ -389,7 +389,7 @@ packages:
     - common_cells
     - register_interface
   snitch_cluster:
-    revision: fe4b32cedd15fc6929bbdbc1bfa4d666e7189e3e
+    revision: d65e29fdb4b0d659fbffc7ea2aab6d8a1edf91c1
     version: null
     source:
       Git: git@iis-git.ee.ethz.ch:rfiorani/pulptorrent-snitch-cluster.git

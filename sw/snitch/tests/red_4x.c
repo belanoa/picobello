@@ -8,6 +8,7 @@
 
 #include "snrt.h"
 #include "data/redmule_tensors.h"
+#include "data/pulptorrent.h"
 
 #define STRINGIFY2(X) #X
 #define STRINGIFY(X) STRINGIFY2(X)
@@ -47,7 +48,11 @@ int main() {
 
   //uint32_t errors = 0;
 
-  uint32_t core_idx = snrt_global_core_idx();
+  uint32_t core_idx = snrt_global_core_idx() == 0 ? 0 :
+                      snrt_global_core_idx() == 1 ? 1 :
+                      snrt_global_core_idx() == 1+(1/NrRedWLocal*NrCcPerMicro)+(1%NrRedWLocal) ? 2 :
+                      snrt_global_core_idx() == 1+(1/NrRedHLocal*NrCcPerMicro*NrMicroW)+(1%NrRedHLocal*NrRedWLocal) ? 3 :
+                      snrt_global_core_idx() == 1+(1/NrRedWLocal*NrCcPerMicro)+(1%NrRedWLocal)+(1/NrRedHLocal*NrCcPerMicro*NrMicroW)+(1%NrRedHLocal*NrRedWLocal) ? 4 : 9000;
 
   uint8_t *local_x1;
   uint8_t *local_x2;
@@ -82,16 +87,16 @@ int main() {
 
   snrt_cluster_hw_barrier();
 
-  if (core_idx != 0) {
-    int unsigned is_x_receive = (core_idx-1) / RedWidth != 0;
+  if (core_idx > 0 && core_idx < 5) {
+    int unsigned is_x_receive = (core_idx-1) % RedWidth != 0;
     int unsigned is_x_send    = 1;
-    int unsigned is_w_receive = (core_idx-1) % RedWidth != 0;
+    int unsigned is_w_receive = (core_idx-1) / RedWidth != 0;
     int unsigned is_w_send    = 1;
 
     uint32_t op_id, cur_op;
-    uint32_t x_addr   = (uint32_t) ((core_idx-1) % RedWidth == 0 ? local_x1 : local_x2 + x_size/2);
-    uint32_t w_addr   = (uint32_t) ((core_idx-1) / RedWidth == 0 ? local_w1 : local_w2 + w_size/2);
-    uint32_t y_addr   = (uint32_t) (local_y1 + ((core_idx-1) % RedWidth)*y_size/2 + ((core_idx-1) / RedWidth)*y_size/4);
+    uint32_t x_addr   = (uint32_t) ((core_idx-1) / RedWidth == 0 ? local_x1 : local_x2 + x_size/2);
+    uint32_t w_addr   = (uint32_t) ((core_idx-1) % RedWidth == 0 ? local_w1 : local_w2 + w_size/2);
+    uint32_t y_addr   = (uint32_t) (local_y1 + ((core_idx-1) / RedWidth)*y_size/2 + ((core_idx-1) % RedWidth)*y_size/4);
     uint32_t y_offs   = 0;
     uint32_t cfg_reg0 = (((K_SIZE/2) << 16) | ((M_SIZE/2) << 0));
     uint32_t cfg_reg1 = ((is_w_send << 19) | (is_w_receive << 18) | (is_x_send << 17) | (is_x_receive << 16) | ((N_SIZE) << 0));

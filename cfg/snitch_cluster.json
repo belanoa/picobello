@@ -40,9 +40,9 @@
         cluster_base_expose: true,
         alias_region_enable: true,
         alias_region_base: 0x30000000,
-        nr_external_cores: 4,
-        num_exposed_wide_tcdm_ports: 4,
-        num_exposed_narrow_tcdm_ports: 4,
+        nr_external_cores: 4, //==numero di core ext
+        num_exposed_wide_tcdm_ports: 4, //==numero di redmule
+        num_exposed_narrow_tcdm_ports: 4, //==numero di core ext se MuxNarrowPort==1 else (numero di core ext)*3
         narrow_axi_port_expose: false,
         enable_external_interrupts: true,
         enable_xif: true,

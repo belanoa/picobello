@@ -44,8 +44,8 @@ int main (void) {
   uint16_t* local_w_mm   = (uint16_t *) (0x20000000 + 0x0800);
   uint16_t* local_x_gemm = (uint16_t *) (0x20000000 + 0x8000);
   uint16_t* local_w_gemm = (uint16_t *) (0x20000000 + 0x8800);
-  uint16_t* local_z      = (uint16_t *) (0x20000000 + 0x20000);
-  uint16_t* golden      = (uint16_t *)  (0x20000000 + 0x10000);
+  uint16_t* local_z      = (uint16_t *) (0x20000000 + 0x18000);
+  uint16_t* golden       = (uint16_t *) (0x20000000 + 0x10000);
 
   uint16_t x_size = M_SIZE * N_SIZE * sizeof(uint16_t);
   uint16_t w_size = N_SIZE * K_SIZE * sizeof(uint16_t);
