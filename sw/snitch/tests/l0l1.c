@@ -114,7 +114,7 @@ int main() {
         if (core_idx != 0) {
             for (uint32_t i = 0; i < CFG_CLUSTER_NR_CORES; i++) {
                 (*(((uint32_t *) SNITCH_CLUSTER_ADDRMAP_L0_BASE) + i)) = 0;
-                (*(((uint32_t *) SNITCH_CLUSTER_ADDRMAP_L0_BASE+SNITCH_CLUSTER_ADDRMAP_L0_SIZE) - 1 - i)) = 0;
+                (*(((uint32_t *) (SNITCH_CLUSTER_ADDRMAP_L0_BASE + SNITCH_CLUSTER_ADDRMAP_L0_SIZE)) - 1 - i)) = 0;
             }
         }
 
@@ -149,7 +149,7 @@ int main() {
         snrt_cluster_hw_barrier();
 
         if (core_idx != 0) {
-            (*(((uint32_t *) SNITCH_CLUSTER_ADDRMAP_L0_BASE+SNITCH_CLUSTER_ADDRMAP_L0_SIZE) - core_idx)) = micro_idx+1;
+            (*(((uint32_t *) (SNITCH_CLUSTER_ADDRMAP_L0_BASE + SNITCH_CLUSTER_ADDRMAP_L0_SIZE)) - core_idx)) = micro_idx+1;
         }
 
         fence();
@@ -159,7 +159,7 @@ int main() {
 
         if (core_idx != 0) {
             for (uint32_t i = 0; i < CFG_CLUSTER_NR_CORES; i++) {
-                count+= (*(((uint32_t *) SNITCH_CLUSTER_ADDRMAP_L0_BASE+SNITCH_CLUSTER_ADDRMAP_L0_SIZE) - 1 - i));
+                count+= (*(((uint32_t *) (SNITCH_CLUSTER_ADDRMAP_L0_BASE + SNITCH_CLUSTER_ADDRMAP_L0_SIZE)) - 1 - i));
             }
             if (count != NrCcPerMicro*(micro_idx+1)) error++;
         }

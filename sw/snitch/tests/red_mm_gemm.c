@@ -41,9 +41,9 @@ int main (void) {
   uint32_t core_idx = snrt_global_core_idx();
 
   uint16_t* local_x_mm   = (uint16_t *) (0x20000000 + 0x0000);
-  uint16_t* local_w_mm   = (uint16_t *) (0x20000000 + 0x0800);
+  uint16_t* local_w_mm   = (uint16_t *) (0x20000000 + 0x4000);
   uint16_t* local_x_gemm = (uint16_t *) (0x20000000 + 0x8000);
-  uint16_t* local_w_gemm = (uint16_t *) (0x20000000 + 0x8800);
+  uint16_t* local_w_gemm = (uint16_t *) (0x20000000 + 0xc000);
   uint16_t* local_z      = (uint16_t *) (0x20000000 + 0x18000);
   uint16_t* golden       = (uint16_t *) (0x20000000 + 0x10000);
 
